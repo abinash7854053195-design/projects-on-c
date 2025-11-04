@@ -1,0 +1,7 @@
+1      ABINASH DAS          18     555.00
+2      ANICE DAS            14     544.00
+3      SOYAM RANJAN SAHU    17     569.00
+4      RAMESWAR BEHERA      17     530.00
+5      SATYAJIT BARIK       18     525.00
+
+
