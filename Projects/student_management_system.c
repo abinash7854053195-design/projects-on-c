@@ -32,22 +32,21 @@ Features:-
 #define LINE_SIZE 256
 #define NAME_SIZE 100
 
+
+
+
 // Helper function implementations
 void trim_newline(char *str) {
     str[strcspn(str, "\n")] = 0;
 }
 
 int parse_line(const char *line, int *roll_no, char *name, int *age, float *marks) {
-    char temp_name[NAME_SIZE];
-    int result = sscanf(line, "%d %99[^\t] %d %f", roll_no, temp_name, age, marks);
-    if (result == 4) {
-        strcpy(name, temp_name);
-        return 1;
-    }
-    return 0;
+    return sscanf(line, "%d|%99[^|]|%d|%f", roll_no, name, age, marks) == 4;
 }
 
-// ----:STUDENT_MANAGEMENT_SYSTEM(C):----
+
+//                                                         ----:STUDENT_MANAGEMENT_SYSTEM(C):----
+
 struct student{
     int roll_no;
     char name[50];
@@ -55,6 +54,7 @@ struct student{
     float marks;
 };
 // Function to check if roll number already exists
+
 int isduplicateroll(int roll_no) {
     FILE *fptr = fopen(DATA_FILE, "r");
     if (fptr == NULL) {
@@ -69,8 +69,8 @@ int isduplicateroll(int roll_no) {
 
     while (fgets(line, sizeof(line), fptr) != NULL) {
         trim_newline(line);
-        if (parse_line(line, &existing_roll, name, &age, &marks)) {
-            if (existing_roll == roll_no) {
+        int ok = parse_line(line, &existing_roll, name, &age, &marks); {
+            if (ok && existing_roll == roll_no) {
                 fclose(fptr);
                 return 1; // Duplicate found
             }
@@ -81,60 +81,62 @@ int isduplicateroll(int roll_no) {
     return 0; // No duplicate found
 }
 // 1. Add Student----
+
 void addstudent() {
     struct student s;
-    FILE *fptr;
-    fptr = fopen("students.txt", "a");//open file in append mode
-    if(fptr == NULL) {
-        printf("ERROR opening file!\n");
+
+    printf("\nEnter Roll No: ");
+    if (scanf("%d", &s.roll_no) != 1) {
+        printf("Invalid Roll No!\n");
+        while (getchar() != '\n');
+        return;
+    }
+    getchar();
+int isduplicateroll(int roll_no);
+    if (isduplicateroll(s.roll_no)) {
+        printf("Roll No %d already exists! Record not added.\n", s.roll_no);
         return;
     }
 
-
-    printf("\nEnter Roll No: ");
-    scanf("%d", &s.roll_no);
-    getchar(); // to consume newline character left by previous scanf
-
     printf("Enter Name: ");
     fgets(s.name, sizeof(s.name), stdin);
-    s.name[strcspn(s.name, "\n")] = 0; // remove newline character
+    trim_newline(s.name);
 
     printf("Enter Age: ");
-    scanf("%d", &s.age);
+    if (scanf("%d", &s.age) != 1) {
+        printf("Invalid Age!\n");
+        while (getchar() != '\n');
+        return;
+    }
 
     printf("Enter Marks: ");
-    scanf("%f", &s.marks);
-    
-    fprintf(fptr, "%-6d %-20s %-6d %-6.2f\n", s.roll_no, s.name, s.age, s.marks);
+    if (scanf("%f", &s.marks) != 1) {
+        printf("Invalid Marks!\n");
+        while (getchar() != '\n');
+        return;
+    }
+    getchar();
 
+    FILE *fptr = fopen(DATA_FILE, "a+");
+    if (!fptr) {
+        perror("Error opening file");
+        return;
+    }
+
+    // Write with '|' as separator for easy parsing
+    fprintf(fptr, "%d|%s|%d|%.2f\n", s.roll_no, s.name, s.age, s.marks);
     fclose(fptr);
-    printf("Student record added successfully!\n");
-    printf("you entered:\n");
-    printf("Roll No: %d\n", s.roll_no);
-    printf("Name :");
-    puts(s.name);
-    printf("Age: %d\n", s.age);
-    printf("Marks: %.2f\n", s.marks);
 
-// Check for duplicate roll number
-    printf("\nEnter Roll No: ");
-scanf("%d", &s.roll_no);
-getchar();
-
-if (isduplicateroll(s.roll_no)) {
-    printf("❌ Roll No %d already exists! Record not added.\n", s.roll_no);
-    fclose(fptr);
-    return;
+    printf("\n Student added successfully!\n");
+    printf("Roll No: %d\nName: %s\nAge: %d\nMarks: %.2f\n", s.roll_no, s.name, s.age, s.marks);
 }
 
-    
-fclose(fptr);
-}
 // 2. Display All Students----
+
 void displayStudents() {
-    FILE *fp = fopen(DATA_FILE, "r");
-    if (!fp) {
-        puts("\n⚠️ No records found.");
+    FILE *fptr = fopen(DATA_FILE, "r");
+    if (!fptr) {
+        puts("\n No records found.");
         return;
     }
 
@@ -147,18 +149,23 @@ void displayStudents() {
     printf("%-6s %-20s %-6s %-6s\n", "Roll", "Name", "Age", "Marks");
     printf("---------------------------------------------------\n");
 
-    while (fgets(line, sizeof(line), fp)) {
-        trim_newline(line);
+    int any = 0;
+    while (fgets(line, sizeof(line), fptr)) {
         if (parse_line(line, &roll, name, &age, &marks)) {
             printf("%-6d %-20s %-6d %-6.2f\n", roll, name, age, marks);
+            any = 1;
         }
     }
 
+    if (!any){
+        printf("\nNo data to display.\n");}
+
     printf("---------------------------------------------------\n");
-    fclose(fp);
+    fclose(fptr);
 }
 
 // 3. Search Student by Roll No----
+
 void searchstudent() {
    int target;
    char line[LINE_SIZE];
@@ -201,7 +208,9 @@ void searchstudent() {
          fclose(fptr);
 }
 //4.Delete Student --
-void deletestudent(){
+
+void deletestudent()
+{
     int target;
     char line[LINE_SIZE];
     char name[NAME_SIZE];
@@ -229,18 +238,13 @@ void deletestudent(){
         fclose(fptr);
         return;
     }
-    while (fgets(line, sizeof(line), fptr) != NULL) {
-        trim_newline(line);
-        if(!parse_line(line, &roll_no, name, &age, &marks))
-            continue; // skip malformed lines
-
-        if (roll_no == target) {
-            deleted = 1;
-            continue; // skip writing this record to temp file (i.e. delete)
-        }
-
-        fprintf(tempfptr, "%-6d %-20s %-6d %-6.2f\n", roll_no, name, age, marks);
-
+    while (fgets(line, sizeof(line), fptr)) {
+        if (parse_line(line, &roll_no, name, &age, &marks)) {
+            if (roll_no == target) {
+                deleted = 1;
+                continue;
+            }
+            fprintf(tempfptr, "%d|%s|%d|%.2f\n", roll_no, name, age, marks);
     }
     fclose(fptr);
     fclose(tempfptr);
@@ -253,8 +257,10 @@ void deletestudent(){
         remove(TEMP_FILE);
         printf("\nStudent with Roll No %d not found, Nothing deleted.\n", target);
     }
+  }
 }
  // 5. Update Student----
+
 void updatestudent(){
     int target;
     char line[LINE_SIZE];
@@ -322,11 +328,11 @@ void updatestudent(){
                     getchar();//clear newline
                 } 
                 /* write updated record using new values */
-                fprintf(tempfptr, "%-6d %-20s %-6d %-6.2f\n", roll_no, new_name, new_age, new_marks);
-                updated = 1;
+                fprintf(tempfptr, "%d|%s|%d|%.2f\n", roll_no, name, age, marks);
+                
             } else {
             //write unchanged records
-            fprintf(tempfptr, "%-6d %-20s %-6d %-6.2f\n", roll_no, name, age, marks);
+            fprintf(tempfptr, "%d|%s|%d|%.2f\n", roll_no, name, age, marks);
                 }
         }
     }
@@ -343,6 +349,7 @@ void updatestudent(){
     }
 }
 //6.Main Menu ----
+
 int main(void){
     int choice;
 
@@ -354,6 +361,7 @@ int main(void){
         printf("4. Delete Student by Roll No\n");
         printf("5. Update Student by Roll No\n");
         printf("6. Exit\n");
+        printf("\n-------------------------------\n");
         printf("Enter your choice: ");
         if(scanf("%d", &choice)!=1){
             puts("Invalid input! Please enter a number between 1-6.\n");
@@ -381,10 +389,12 @@ int main(void){
             case 6:
                 puts("\nExiting the program. Goodbye!\n");
                 exit(0);
-        default:
-            puts("Invalid choice! Please try again ,enter 1-6.\n");
+            default:
+                puts("Invalid choice! Please try again ,enter 1-6.\n");
         }
         }
         return 0;
     }
+
+//-----------------:END OF THE PROJECT:-----------------
     //DONE---------*
